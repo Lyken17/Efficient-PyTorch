@@ -2,7 +2,7 @@
 My best practice of training large dataset using PyTorch.
 
 # Speed overview
-By following the tips, we can reach achieve **~730 images/second** with PyTorch when training ResNet-50 on ImageNet. According to benchmark reported on [Tensorflow](https://www.tensorflow.org/performance/benchmarks) and [MXNet](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification), the performance is very competitive.
+By following the tips, we can reach achieve **~730 images/second** with PyTorch when training ResNet-50 on ImageNet. According to benchmark reported on [Tensorflow](https://www.tensorflow.org/performance/benchmarks) and [MXNet](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification), the performance is still competitive.
 
 ```
 Epoch: [0][430/5005]    Time 0.409 (0.405)      Data 626.6 (728.0)      Loss 6.8381 (6.9754)    Error@1 100.000 (99.850) Error@5 99.609 (99.259)
