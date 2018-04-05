@@ -2,7 +2,7 @@
 My best practice of training large dataset using PyTorch.
 
 # Speed overview
-By following the tips, we can ahieve **~730 images/second** when training ResNet-50 on ImageNet, which is comparable to [Tensorflow](https://www.tensorflow.org/performance/benchmarks) and [MXNet](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification)
+By following the tips, we can reach achieve **~730 images/second** with PyTorch when training ResNet-50 on ImageNet. According to benchmark reported on [Tensorflow](https://www.tensorflow.org/performance/benchmarks) and [MXNet](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification), the performance is still competitive.
 
 ```
 Epoch: [0][430/5005]    Time 0.409 (0.405)      Data 626.6 (728.0)      Loss 6.8381 (6.9754)    Error@1 100.000 (99.850) Error@5 99.609 (99.259)
@@ -19,9 +19,11 @@ Epoch: [0][530/5005]    Time 0.340 (0.450)      Data 752.9 (724.4)      Loss 6.8
 ```
 
 # Key Points of Efficiency 
+Now most frameworks adapt `CUDNN` as their backends. Without special optimization, the inference time is similiar across frameworks. To optimize training time, we focus on other points such as 
+
 ## Data Loader
 The default combination `datasets.ImageFolder` + `data.DataLoader` is not enough for large scale classification. According to my experience, even I switch to Samsung 960 Pro (read 3.5 GB/s, write 2.0 GB/s), whole training pipeline still suffers at disk I/O.
 
-The reason causing is the slow reading of discountiuous small chunks. You should have experienced one or two times, for example, type `ls` command under original ImageNet validation folder. To optimize, we need to compress small JPEG images into a large binary file. TensorFlow has its own `TFRecord` and `MXNet` uses `recordIO`. I do not want to introduce more depencies here, therefore I choose `LMDB`.
+The reason causing is the slow reading of discountiuous small chunks. You should have experienced one or two times, for example, type `ls` command under original ImageNet validation folder. To optimize, we need to compress small JPEG images into a large binary file. TensorFlow has its own `TFRecord` and MXNet uses `recordIO`. Beside these two, there are many other options like `hdf5`, `pth`, `n5`, `lmdb` etc. Here I will choose `lmdb`, because of its super effienceny. 
 
 
