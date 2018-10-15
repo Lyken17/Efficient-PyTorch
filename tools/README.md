@@ -1,5 +1,5 @@
 ## LMDB 
-LMDB is a json-like, but binarized key-value storage. In my design, the format of converted LMDB is defined as follow.
+LMDB is a json-like, but in binary stream key-value storage. In my design, the format of converted LMDB is defined as follow.
 
 key | value 
 --- | ---
