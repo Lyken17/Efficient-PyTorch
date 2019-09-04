@@ -27,7 +27,7 @@ The default combination `datasets.ImageFolder` + `data.DataLoader` is not enough
 The reason causing is the slow reading of **discountiuous small chunks**. To optimize, we need to dump small JPEG images into a large binary file. TensorFlow has its own `TFRecord` and MXNet uses `recordIO`. Beside these two, there are other options like `hdf5`, `pth`, `n5`, `lmdb` etc. Here I choose `lmdb` because
 
 1. `TFRecord` is a private protocal which is hard to hack into. `RecordIO`'s documentation is confusing and do not provide a clean python API.
-2. `hdf5` `pth` `n5`, though with a very straightforward json-like API, require to put the whole file into memory. This is not practicle when you play with large dataset like imagenet. 
+2. `hdf5` `pth` `n5`, though with a straightforward json-like API, require to put the whole file into memory. This is not practicle when you play with large dataset like imagenet. 
 
 ## Data Parallel (On-going)
 The default data parallel of PyTorch, powerd by `nn.DataParallel`, is in-efficienct! Fisrt, because the GIL of Python, multi-threading do not fully utilize all cores. Second, the collective scheme of `DataParallel` is to gather all results on `cuda:0`. It leads to imbalance workload and sometimes OOM especially you are running models for segmentation. 
