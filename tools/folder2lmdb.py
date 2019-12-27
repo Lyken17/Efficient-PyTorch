@@ -28,8 +28,8 @@ class ImageFolderLMDB(data.Dataset):
                              readahead=False, meminit=False)
         with self.env.begin(write=False) as txn:
             # self.length = txn.stat()['entries'] - 1
-            self.length = txn.get(b'__len__')
-            self.keys = msgpack.loads(txn.get(b'__keys__'))
+            self.length =pa.deserialize(txn.get(b'__len__'))
+            self.keys= pa.deserialize(txn.get(b'__keys__'))
 
         self.transform = transform
         self.target_transform = target_transform
@@ -39,7 +39,7 @@ class ImageFolderLMDB(data.Dataset):
         env = self.env
         with env.begin(write=False) as txn:
             byteflow = txn.get(self.keys[index])
-        unpacked = msgpack.loads(byteflow)
+        unpacked = pa.deserialize(byteflow)
 
         # load image
         imgbuf = unpacked[0]
