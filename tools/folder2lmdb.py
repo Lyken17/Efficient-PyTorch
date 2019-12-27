@@ -39,7 +39,7 @@ class ImageFolderLMDB(data.Dataset):
         env = self.env
         with env.begin(write=False) as txn:
             byteflow = txn.get(self.keys[index])
-        unpacked = msgpack.loads(byteflow)
+        unpacked = pa.deserialize(byteflow)
 
         # load image
         imgbuf = unpacked[0]
