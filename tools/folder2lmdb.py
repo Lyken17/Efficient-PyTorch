@@ -130,11 +130,11 @@ def dumps_pyarrow(obj):
     return pa.serialize(obj).to_buffer()
 
 
-def folder2lmdb(dpath, name="train", write_frequency=5000):
+def folder2lmdb(dpath, name="train", write_frequency=5000, num_workers=16):
     directory = osp.expanduser(osp.join(dpath, name))
     print("Loading dataset from %s" % directory)
     dataset = ImageFolder(directory, loader=raw_reader)
-    data_loader = DataLoader(dataset, num_workers=16, collate_fn=lambda x: x)
+    data_loader = DataLoader(dataset, num_workers=num_workers, collate_fn=lambda x: x)
 
     lmdb_path = osp.join(dpath, "%s.lmdb" % name)
     isdir = os.path.isdir(lmdb_path)
@@ -143,7 +143,8 @@ def folder2lmdb(dpath, name="train", write_frequency=5000):
     db = lmdb.open(lmdb_path, subdir=isdir,
                    map_size=1099511627776 * 2, readonly=False,
                    meminit=False, map_async=True)
-
+    
+    print(len(dataset), len(data_loader))
     txn = db.begin(write=True)
     for idx, data in enumerate(data_loader):
         # print(type(data), data)
@@ -167,4 +168,13 @@ def folder2lmdb(dpath, name="train", write_frequency=5000):
 
 
 if __name__ == "__main__":
-    folder2lmdb("/home/ligeng/torch_data/places365")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--folder", type=str)
+    parser.add_argument('-s', '--split', type=str, default="val")
+    parser.add_argument('--out', type=str, default=".")
+    parser.add_argument('-p', '--procs', type=int, default=20)
+
+    args = parser.parse_args()
+
+    folder2lmdb(args.folder, num_workers=args.procs, name=args.split)
