@@ -29,8 +29,11 @@ The reason causing is the slow reading of **discountiuous small chunks**. To opt
 1. `TFRecord` is a private protocal which is hard to hack into. `RecordIO`'s documentation is confusing and do not provide a clean python API.
 2. `hdf5` `pth` `n5`, though with a straightforward json-like API, require to put the whole file into memory. This is not practicle when you play with large dataset like imagenet. 
 
-## Data Parallel (On-going)
-The default data parallel of PyTorch, powerd by `nn.DataParallel`, is in-efficienct! Fisrt, because the GIL of Python, multi-threading do not fully utilize all cores. Second, the collective scheme of `DataParallel` is to gather all results on `cuda:0`. It leads to imbalance workload and sometimes OOM especially you are running models for segmentation. 
+## Data Parallel
 
-`nn.DistributedDataParllel` provides a more elegant solution. 
+The default data parallel of PyTorch, powerd by `nn.DataParallel`, is in-efficienct! Fisrt, because the GIL of Python, multi-threading do not fully utilize all cores [torch/nn/parallel/parallel_apply.py#47](https://github.com/pytorch/pytorch/blob/master/torch/nn/parallel/parallel_apply.py#L47). Second, the collective scheme of `DataParallel` is to gather all results on `cuda:0`. It leads to imbalance workload and sometimes OOM especially you are running segmentation models. 
+
+`nn.DistributedDataParllel` provides a more elegant solution: Instead of launching call from different threads, it starts with multiple processes (no GIL) and assigns a balanced workload for all GPUs. 
+
+(on-going) detailed scripts and experiment numbers.
 
