@@ -16,8 +16,12 @@ As for details of reading/writing, please refer to [code](folder2lmdb.py).
 
 ## Convert `ImageFolder` to `LMDB`
 ```bash
-python folder2lmdb.py --folder ~/torch_data/ --name train
+python folder2lmdb.py -f ~/torch_data/ -s train
 ```
+
+OR
+
+You can download the pre-processed lmdb on academic torrents: [Train]() [Val](https://academictorrents.com/details/207ebd69f80a3707f035cd91a114466a270e044d)
 
 ## ImageFolderLMDB
 The usage of `ImageFolderLMDB` is identical to `torchvision.datasets`. 
