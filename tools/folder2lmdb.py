@@ -1,21 +1,13 @@
 import os
 import os.path as osp
-import os, sys
-import os.path as osp
-from PIL import Image
-
 import six
 import lmdb
 import pickle
 import msgpack
-import pyarrow as pa
-
-import torch
 import torch.utils.data as data
+from PIL import Image
 from torch.utils.data import DataLoader
-from torchvision.transforms import transforms
 from torchvision.datasets import ImageFolder
-from torchvision import transforms, datasets
 
 class ImageFolderLMDB(data.Dataset):
     def __init__(self, db_path, db_size, transform=None, target_transform=None):
