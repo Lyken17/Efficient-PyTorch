@@ -3,13 +3,11 @@ import os.path as osp
 import os, sys
 import os.path as osp
 from PIL import Image
-import six
-import string
 
+import six
 import lmdb
 import pickle
 import msgpack
-import tqdm
 import pyarrow as pa
 
 import torch
@@ -23,28 +21,29 @@ from torchvision import transforms, datasets
 class ImageFolderLMDB(data.Dataset):
     def __init__(self, db_path, transform=None, target_transform=None):
         self.db_path = db_path
-        self.env = lmdb.open(db_path, subdir=osp.isdir(db_path),
-                             readonly=True, lock=False,
-                             readahead=False, meminit=False)
-        with self.env.begin(write=False) as txn:
-            # self.length = txn.stat()['entries'] - 1
-            self.length =pa.deserialize(txn.get(b'__len__'))
-            self.keys= pa.deserialize(txn.get(b'__keys__'))
-
         self.transform = transform
         self.target_transform = target_transform
 
+    def open_lmdb(self):
+         self.env = lmdb.open(self.db_path, subdir=osp.isdir(self.db_path),
+                              readonly=True, lock=False,
+                              readahead=False, meminit=False)
+         self.txn = self.env.begin(write=False, buffers=True)
+         self.length = pa.deserialize(self.txn.get(b'__len__'))
+         self.keys = pa.deserialize(self.txn.get(b'__keys__'))
+
     def __getitem__(self, index):
+        if not hasattr(self, 'txn'):
+            self.open_lmdb()
+        
         img, target = None, None
-        env = self.env
-        with env.begin(write=False) as txn:
-            byteflow = txn.get(self.keys[index])
+        byteflow = self.txn.get(self.keys[index])
         unpacked = pa.deserialize(byteflow)
 
         # load image
         imgbuf = unpacked[0]
         buf = six.BytesIO()
-        buf.write(imgbuf)
+        buf.write(imgbuf[0])
         buf.seek(0)
         img = Image.open(buf).convert('RGB')
 
@@ -60,7 +59,8 @@ class ImageFolderLMDB(data.Dataset):
         return img, target
 
     def __len__(self):
-        return self.length
+        return 25000
+        #return self.length
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' + self.db_path + ')'
@@ -130,25 +130,29 @@ def dumps_pyarrow(obj):
     return pa.serialize(obj).to_buffer()
 
 
-def folder2lmdb(dpath, name="train", write_frequency=5000, num_workers=16):
+def folder2lmdb(dpath, name="train_images", write_frequency=5000, num_workers=16):
+    def collate_fn(x):
+        return x + 1
+    
     directory = osp.expanduser(osp.join(dpath, name))
     print("Loading dataset from %s" % directory)
     dataset = ImageFolder(directory, loader=raw_reader)
-    data_loader = DataLoader(dataset, num_workers=num_workers, collate_fn=lambda x: x)
+    data_loader = DataLoader(dataset, num_workers=num_workers)
 
     lmdb_path = osp.join(dpath, "%s.lmdb" % name)
     isdir = os.path.isdir(lmdb_path)
 
     print("Generate LMDB to %s" % lmdb_path)
     db = lmdb.open(lmdb_path, subdir=isdir,
-                   map_size=1099511627776 * 2, readonly=False,
+                   map_size=30737418240, readonly=False,
                    meminit=False, map_async=True)
     
     print(len(dataset), len(data_loader))
     txn = db.begin(write=True)
-    for idx, data in enumerate(data_loader):
+    for idx, (data, label) in enumerate(data_loader):
         # print(type(data), data)
-        image, label = data[0]
+        image = data
+        label = label.numpy()
         txn.put(u'{}'.format(idx).encode('ascii'), dumps_pyarrow((image, label)))
         if idx % write_frequency == 0:
             print("[%d/%d]" % (idx, len(data_loader)))
@@ -176,5 +180,8 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--procs', type=int, default=20)
 
     args = parser.parse_args()
+    
+    args.folder = "C:\\Users\\cml\\Downloads\\cats_vs_dogs"
+    args.split = "train"
 
     folder2lmdb(args.folder, num_workers=args.procs, name=args.split)
