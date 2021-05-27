@@ -17,10 +17,10 @@ from torchvision.transforms import transforms
 from torchvision.datasets import ImageFolder
 from torchvision import transforms, datasets
 
-
 class ImageFolderLMDB(data.Dataset):
-    def __init__(self, db_path, transform=None, target_transform=None):
+    def __init__(self, db_path, db_size, transform=None, target_transform=None):
         self.db_path = db_path
+        self.db_size = db_size
         self.transform = transform
         self.target_transform = target_transform
 
@@ -29,8 +29,8 @@ class ImageFolderLMDB(data.Dataset):
                               readonly=True, lock=False,
                               readahead=False, meminit=False)
          self.txn = self.env.begin(write=False, buffers=True)
-         self.length = pa.deserialize(self.txn.get(b'__len__'))
-         self.keys = pa.deserialize(self.txn.get(b'__keys__'))
+         self.length = pickle.loads(self.txn.get(b'__len__'))
+         self.keys = pickle.loads(self.txn.get(b'__keys__'))
 
     def __getitem__(self, index):
         if not hasattr(self, 'txn'):
@@ -38,7 +38,7 @@ class ImageFolderLMDB(data.Dataset):
         
         img, target = None, None
         byteflow = self.txn.get(self.keys[index])
-        unpacked = pa.deserialize(byteflow)
+        unpacked = pickle.loads(byteflow)
 
         # load image
         imgbuf = unpacked[0]
@@ -59,12 +59,10 @@ class ImageFolderLMDB(data.Dataset):
         return img, target
 
     def __len__(self):
-        return 25000
-        #return self.length
+        return self.db_size
 
     def __repr__(self):
         return self.__class__.__name__ + ' (' + self.db_path + ')'
-
 
 class ImageFolderLMDB_old(data.Dataset):
     def __init__(self, db_path, transform=None, target_transform=None):
@@ -113,27 +111,21 @@ class ImageFolderLMDB_old(data.Dataset):
     def __repr__(self):
         return self.__class__.__name__ + ' (' + self.db_path + ')'
 
-
 def raw_reader(path):
     with open(path, 'rb') as f:
         bin_data = f.read()
     return bin_data
 
-
-def dumps_pyarrow(obj):
+def dumps_pickle(obj):
     """
     Serialize an object.
-
-    Returns:
-        Implementation-dependent bytes-like object
-    """
-    return pa.serialize(obj).to_buffer()
-
-
-def folder2lmdb(dpath, name="train_images", write_frequency=5000, num_workers=16):
-    def collate_fn(x):
-        return x + 1
     
+    Returns :
+        The pickled representation of the object obj as a bytes object
+    """
+    return pickle.dumps(obj)
+
+def folder2lmdb(dpath, name="train_images", write_frequency=5000, num_workers=0):
     directory = osp.expanduser(osp.join(dpath, name))
     print("Loading dataset from %s" % directory)
     dataset = ImageFolder(directory, loader=raw_reader)
@@ -153,7 +145,7 @@ def folder2lmdb(dpath, name="train_images", write_frequency=5000, num_workers=16
         # print(type(data), data)
         image = data
         label = label.numpy()
-        txn.put(u'{}'.format(idx).encode('ascii'), dumps_pyarrow((image, label)))
+        txn.put(u'{}'.format(idx).encode('ascii'), dumps_pickle((image, label)))
         if idx % write_frequency == 0:
             print("[%d/%d]" % (idx, len(data_loader)))
             txn.commit()
@@ -163,21 +155,23 @@ def folder2lmdb(dpath, name="train_images", write_frequency=5000, num_workers=16
     txn.commit()
     keys = [u'{}'.format(k).encode('ascii') for k in range(idx + 1)]
     with db.begin(write=True) as txn:
-        txn.put(b'__keys__', dumps_pyarrow(keys))
-        txn.put(b'__len__', dumps_pyarrow(len(keys)))
+        txn.put(b'__keys__', dumps_pickle(keys))
+        txn.put(b'__len__', dumps_pickle(len(keys)))
 
+    with open(osp.join(dpath, 'LMDB_SIZE'), 'w') as fd:
+        fd.write(str(len(keys)))
+    
     print("Flushing database ...")
     db.sync()
     db.close()
 
-
-if __name__ == "__main__":
+if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--folder", type=str)
     parser.add_argument('-s', '--split', type=str, default="val")
     parser.add_argument('--out', type=str, default=".")
-    parser.add_argument('-p', '--procs', type=int, default=20)
+    parser.add_argument('-p', '--procs', type=int, default=0)
 
     args = parser.parse_args()
     

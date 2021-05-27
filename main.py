@@ -4,6 +4,7 @@ import random
 import shutil
 import time
 import warnings
+import os.path as osp
 
 import torch
 import torch.nn as nn
@@ -75,7 +76,8 @@ def main():
     model_params = model.parameters()
     data_dir = "C:\\Users\\cml\\Downloads\\cats_vs_dogs\\train"
     data_db = "C:\\Users\\cml\\Downloads\\cats_vs_dogs\\train.lmdb"
-    
+    directory = "C:\\Users\\cml\\Downloads\\cats_vs_dogs"
+        
     # send model to gpu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")   
     model = model.to(device)
@@ -86,11 +88,16 @@ def main():
 
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
+    
+    # get the size of the db
+    with open(osp.join(directory, 'LMDB_SIZE'), 'r') as fd:
+        data_size = int(fd.read())
 
     for dataset_type in DBS:
         if dataset_type == 'lmdb':
             train_dataset = ImageFolderLMDB(
                 data_db,
+                data_size,
                 transforms.Compose([
                     transforms.RandomResizedCrop(64),
                     transforms.RandomHorizontalFlip(),
