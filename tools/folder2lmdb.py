@@ -10,9 +10,8 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 
 class ImageFolderLMDB(data.Dataset):
-    def __init__(self, db_path, lengeth, transform=None, target_transform=None):
+    def __init__(self, db_path, transform=None, target_transform=None):
         self.db_path = db_path
-        self.length = lengeth
         self.transform = transform
         self.target_transform = target_transform
         
@@ -122,7 +121,7 @@ def dumps_pickle(obj):
     """
     return pickle.dumps(obj)
 
-def folder2lmdb(dpath, name="train_images", write_frequency=5000, num_workers=0):
+def folder2lmdb(dpath, name="train", write_frequency=5000, num_workers=0):
     directory = osp.expanduser(osp.join(dpath, name))
     print("Loading dataset from %s" % directory)
     dataset = ImageFolder(directory, loader=raw_reader)
