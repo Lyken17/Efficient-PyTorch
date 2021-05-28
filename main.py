@@ -170,6 +170,10 @@ def main():
         batch_size=args.batch_size, shuffle=False,
         num_workers=args.workers, pin_memory=True)
     
+    if args.evaluate:
+        validate(val_loader, model, criterion)
+        return
+    
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
