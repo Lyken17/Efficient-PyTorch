@@ -15,14 +15,19 @@ class ImageFolderLMDB(data.Dataset):
         self.length = lengeth
         self.transform = transform
         self.target_transform = target_transform
+        
+        env = lmdb.open(self.db_path, subdir=osp.isdir(self.db_path),
+                readonly=True, lock=False,
+                readahead=False, meminit=False)
+        with env.begin(write=False) as txn:
+            self.length = pickle.loads(txn.get(b'__len__'))
+            self.keys = pickle.loads(txn.get(b'__keys__'))
 
     def open_lmdb(self):
          self.env = lmdb.open(self.db_path, subdir=osp.isdir(self.db_path),
                               readonly=True, lock=False,
                               readahead=False, meminit=False)
          self.txn = self.env.begin(write=False, buffers=True)
-         self.length = pickle.loads(self.txn.get(b'__len__'))
-         self.keys = pickle.loads(self.txn.get(b'__keys__'))
 
     def __getitem__(self, index):
         if not hasattr(self, 'txn'):
